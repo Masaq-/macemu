@@ -70,6 +70,8 @@ static bool net_open = false;	// Flag: initialization succeeded, network device 
 
 static bool udp_tunnel = false;	// Flag: tunnelling AppleTalk over UDP using BSD socket API
 static uint16 udp_port;
+static const char* udp_server = NULL;
+static uint32 udp_server_ip = 0;
 static int udp_socket = -1;
 
 // Mac address of driver data in MacOS RAM
@@ -93,6 +95,7 @@ void EtherInit(void)
 	if (PrefsFindBool("udptunnel")) {
 		udp_tunnel = true;
 		udp_port = PrefsFindInt32("udpport");
+		udp_server = PrefsFindString("udpserver");
 
 		// Open UDP socket
 		udp_socket = socket(PF_INET, SOCK_DGRAM, 0);
@@ -106,7 +109,10 @@ void EtherInit(void)
 		memset(&sa, 0, sizeof(sa));
 		sa.sin_family = AF_INET;
 		sa.sin_addr.s_addr = INADDR_ANY;
-		sa.sin_port = htons(udp_port);
+		if (udp_server && strlen(udp_server))
+			sa.sin_port = 0;
+		else
+			sa.sin_port = htons(udp_port);
 		if (bind(udp_socket, (struct sockaddr *)&sa, sizeof(sa)) < 0) {
 			perror("bind");
 			CLOSESOCKET(udp_socket);
@@ -134,6 +140,16 @@ void EtherInit(void)
 		ether_addr[3] = udp_ip >> 16;
 		ether_addr[4] = udp_ip >> 8;
 		ether_addr[5] = udp_ip;
+		if (udp_server && strlen(udp_server)) {
+			ether_addr[2] = rand() % 256;
+			ether_addr[3] = rand() % 256;
+			ether_addr[4] = rand() % 256;
+			ether_addr[5] = rand() % 256;
+			struct hostent *local = gethostbyname(udp_server);
+			if (local)
+				udp_server_ip = *(uint32 *)local->h_addr_list[0];
+			udp_server_ip = ntohl(udp_server_ip);
+		}
 		D(bug("Ethernet address %02x %02x %02x %02x %02x %02x\n", ether_addr[0], ether_addr[1], ether_addr[2], ether_addr[3], ether_addr[4], ether_addr[5]));
 
 		// Set socket options
@@ -327,7 +343,9 @@ int16 EtherControl(uint32 pb, uint32 dce)
 
 					// Extract destination address
 					uint32 dest_ip;
-					if (len >= 6 && packet[0] == 'B' && packet[1] == '2')
+					if (udp_server_ip)
+						dest_ip = udp_server_ip;
+					else if (len >= 6 && packet[0] == 'B' && packet[1] == '2')
 						dest_ip = (packet[2] << 24) | (packet[3] << 16) | (packet[4] << 8) | packet[5];
 					else if (is_apple_talk_broadcast(packet) || is_ethernet_broadcast(packet))
 						dest_ip = INADDR_BROADCAST;

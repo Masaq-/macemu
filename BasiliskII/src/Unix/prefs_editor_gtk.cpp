@@ -1223,7 +1223,7 @@ static void create_input_pane(GtkWidget *top)
  *  "Serial/Network" pane
  */
 
-static GtkWidget *w_seriala, *w_serialb, *w_ether, *w_udp_port;
+static GtkWidget *w_seriala, *w_serialb, *w_ether, *w_udp_port, *w_udp_server;
 
 // Set sensitivity of widgets
 static void set_serial_sensitive(void)
@@ -1231,6 +1231,7 @@ static void set_serial_sensitive(void)
 #if SUPPORTS_UDP_TUNNEL
 	gtk_widget_set_sensitive(w_ether, !PrefsFindBool("udptunnel"));
 	gtk_widget_set_sensitive(w_udp_port, PrefsFindBool("udptunnel"));
+	gtk_widget_set_sensitive(w_udp_server, PrefsFindBool("udptunnel"));
 #endif
 }
 
@@ -1260,6 +1261,7 @@ static void read_serial_settings(void)
 
 #if SUPPORTS_UDP_TUNNEL
 	PrefsReplaceInt32("udpport", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(w_udp_port)));
+	PrefsReplaceString("udpserver", get_file_entry_path(w_udp_server));
 #endif
 }
 
@@ -1417,6 +1419,8 @@ static void create_serial_pane(GtkWidget *top)
 	w_udp_port = gtk_spin_button_new(GTK_ADJUSTMENT(adj), 0.0, 0);
 	gtk_widget_show(w_udp_port);
 	gtk_box_pack_start(GTK_BOX(hbox), w_udp_port, FALSE, FALSE, 0);
+
+	w_udp_server = make_file_entry(box, STR_UDPSERVER_CTRL, "udpserver", true);
 #endif
 
 	set_serial_sensitive();
