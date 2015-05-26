@@ -498,13 +498,8 @@ static ssize_t sheep_net_write(struct file *f, const char *buf, size_t count, lo
 	/* Outgoing packet (will be on the net) */
 	demasquerade(v, skb);
 
-	{
-		struct sk_buff *lskb = skb_copy(skb, GFP_ATOMIC);
-		if (lskb) {
-			lskb->protocol = PROT_MAGIC;	/* Magic value (we can recognize the packet in sheep_net_receiver) */
-			dev_queue_xmit(lskb);
-		}
-	}
+	skb->protocol = PROT_MAGIC;	/* Magic value (we can recognize the packet in sheep_net_receiver) */
+	dev_queue_xmit(skb);
 	return count;
 }
 
