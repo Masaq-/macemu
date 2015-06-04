@@ -94,7 +94,10 @@
 #endif
 
 // Always use the complete non-stubs Ethernet driver
-#define USE_ETHER_FULL_DRIVER 1
+#define USE_ETHER_FULL_DRIVER 0
+#if USE_ETHER_FULL_DRIVER < 1
+# undef USE_ETHER_FULL_DRIVER
+#endif
 
 #define POWERPC_ROM 1
 
