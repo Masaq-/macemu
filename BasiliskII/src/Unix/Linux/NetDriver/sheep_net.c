@@ -255,9 +255,12 @@ static int sheep_net_open(struct inode *inode, struct file *f)
 	memset(v, 0, sizeof(struct SheepVars));
 	skb_queue_head_init(&v->queue);
 	init_waitqueue_head(&v->wait);
-	v->fake_addr[0] = 'v'; /* "SheepShaver" */
-	v->fake_addr[1] = 'r'; /*          ^ ^  */
-	get_random_bytes(&v->fake_addr[2], 4);
+	v->fake_addr[0] = 0xfe;
+	v->fake_addr[1] = 0xfd;
+	v->fake_addr[2] = 0xde;
+	v->fake_addr[3] = 0xad;
+	v->fake_addr[4] = 0xbe;
+	v->fake_addr[5] = 0xef;
 
 	/* Put our stuff where we will be able to find it later */
 	f->private_data = (void *)v;
@@ -353,26 +356,6 @@ static void demasquerade(struct SheepVars *v, struct sk_buff *skb)
 		if (is_fake_addr(v, p + 30))
 			do_demasq(v, p + 30); /* sender HW-addr */
 	}
-
-	if (p[12] == 0x81 && p[13] == 0x37) {
-		/* IPX Ethernet II */
-		if (is_fake_addr(v, p + 36))
-			do_demasq(v, p + 36); /* sender HW-addr */
-	} else if (p[14] == 0xff && p[15] == 0xff) {
-		/* IPX 802.3 */
-		if (is_fake_addr(v, p + 36))
-			do_demasq(v, p + 36); /* sender HW-addr */
-	} else if (p[14] == 0xe0 && p[15] == 0xe0 && p[16] == 0x03) {
-		/* IPX 802.2 */
-		if (is_fake_addr(v, p + 39))
-			do_demasq(v, p + 39); /* sender HW-addr */
-	} else if (p[14] == 0xaa && p[15] == 0xaa && p[16] == 0x03 &&
-			p[17] == 0x00 && p[18] == 0x00 && p[19] == 0x00 &&
-			p[20] == 0x81 && p[21] == 0x37) {
-		/* IPX 802.2 SNAP */
-		if (is_fake_addr(v, p + 44))
-			do_demasq(v, p + 44); /* sender HW-addr */
-	}
 }
 
 
@@ -392,26 +375,6 @@ static void masquerade(struct SheepVars *v, struct sk_buff *skb)
 		do_masq(v, p); /* destination address */
 
 	/* XXX: reverse ARP might need to be fixed */
-
-	if (p[12] == 0x81 && p[13] == 0x37) {
-		/* IPX Ethernet II */
-		if (is_local_addr(v, p + 24))
-			do_masq(v, p + 24); /* dest HW-addr */
-	} else if (p[14] == 0xff && p[15] == 0xff) {
-		/* IPX 802.3 */
-		if (is_local_addr(v, p + 24))
-			do_masq(v, p + 24); /* dest HW-addr */
-	} else if (p[14] == 0xe0 && p[15] == 0xe0 && p[16] == 0x03) {
-		/* IPX 802.2 */
-		if (is_local_addr(v, p + 27))
-			do_masq(v, p + 27); /* dest HW-addr */
-	} else if (p[14] == 0xaa && p[15] == 0xaa && p[16] == 0x03 &&
-			p[17] == 0x00 && p[18] == 0x00 && p[19] == 0x00 &&
-			p[20] == 0x81 && p[21] == 0x37) {
-		/* IPX 802.2 SNAP */
-		if (is_local_addr(v, p + 32))
-			do_masq(v, p + 32); /* dest HW-addr */
-	}
 }
 
 
